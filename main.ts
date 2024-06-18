@@ -3,16 +3,23 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 const checkboxRegex = /((?:\n|^)\s*)- \[.\]/g;
 
 export default class MyPlugin extends Plugin {
-  private _uncheckAll() {
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (activeLeaf?.view instanceof MarkdownView) {
-      const editor = activeLeaf.view.editor;
+  private _uncheckAll(processSelection=false) {
+    const activeLeaf = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (activeLeaf instanceof MarkdownView) {
+      const editor = activeLeaf.editor;
       const doc = editor.getDoc();
       const cursorPosition = doc.getCursor();
-      const entireContent = doc.getValue();
-      const updatedContent = entireContent.replace(checkboxRegex, "$1- [ ]");
-      doc.setValue(updatedContent);
-      doc.setCursor(cursorPosition);
+      if (processSelection) {
+        const selectedContent = editor.getSelection();
+        const updatedContent = selectedContent.replace(checkboxRegex, "$1- [ ]");
+        editor.replaceSelection(updatedContent);
+        doc.setCursor(cursorPosition);
+      } else {
+        const entireContent = doc.getValue();
+        const updatedContent = entireContent.replace(checkboxRegex, "$1- [ ]");
+        doc.setValue(updatedContent);
+        doc.setCursor(cursorPosition);
+      }
     }
   }
 
@@ -28,6 +35,16 @@ export default class MyPlugin extends Plugin {
         this._uncheckAll();
       },
 		});
+		this.addCommand({
+			id: 'uncheck-all-selection',
+			name: 'Uncheck All Checkboxes in Selection',
+			callback: () => {
+        this._uncheckAll(true);
+			},
+      editorCallback: (editor: Editor, view: MarkdownView) => {
+        this._uncheckAll(true);
+      },
+		});    
 	}
 
 	onunload() {
